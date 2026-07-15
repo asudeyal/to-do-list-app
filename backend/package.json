@@ -1,0 +1,26 @@
+{
+  "name": "todo-list-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "To-Do List uygulamasının Node.js ve Express backend servisi",
+  "type": "module",
+  "main": "dist/server.js",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc",
+    "start": "node dist/server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^22.0.0",
+    "tsx": "^4.23.1",
+    "typescript": "^7.0.2"
+  },
+  "dependencies": {
+    "express": "^5.2.1"
+  }
+}

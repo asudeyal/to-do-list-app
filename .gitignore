@@ -1,0 +1,21 @@
+# Node.js dependencies
+node_modules/
+
+# Compiled files
+dist/
+coverage/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# WebStorm settings
+.idea/
+
+# Log files
+*.log
+
+# Operating system files
+.DS_Store
+Thumbs.db
