@@ -1,7 +1,25 @@
 import app from "./app.js";
+import { pool, verifyDatabaseConnection } from "./config/database.js";
+import { env } from "./config/env.js";
 
-const port = 3000;
+async function startServer(): Promise<void> {
+    try {
+        await verifyDatabaseConnection();
 
-app.listen(port, () => {
-    console.log(`Sunucu http://localhost:${port} adresinde çalışıyor.`);
-});
+        app.listen(env.port, () => {
+            console.log(
+                `Sunucu http://localhost:${env.port} adresinde çalışıyor.`,
+            );
+        });
+    } catch (error: unknown) {
+        const message =
+            error instanceof Error ? error.message : "Bilinmeyen bir hata oluştu.";
+
+        console.error(`Uygulama başlatılamadı: ${message}`);
+
+        await pool.end();
+        process.exit(1);
+    }
+}
+
+void startServer();
