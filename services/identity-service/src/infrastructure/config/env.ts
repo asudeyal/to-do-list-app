@@ -29,8 +29,14 @@ function getNumberEnvironmentVariable(
     return numberValue;
 }
 
+const jwtSecret = getRequiredEnvironmentVariable("JWT_SECRET");
+
+if (jwtSecret.length < 32) {
+    throw new Error("JWT_SECRET en az 32 karakter olmalıdır.");
+}
+
 export const env = {
-    port: getNumberEnvironmentVariable("PORT", 3000),
+    port: getNumberEnvironmentVariable("PORT", 3001),
 
     database: {
         host: getRequiredEnvironmentVariable("DB_HOST"),
@@ -38,5 +44,12 @@ export const env = {
         name: getRequiredEnvironmentVariable("DB_NAME"),
         user: getRequiredEnvironmentVariable("DB_USER"),
         password: getRequiredEnvironmentVariable("DB_PASSWORD"),
+    },
+
+    jwt: {
+        secret: jwtSecret,
+        issuer: getRequiredEnvironmentVariable("JWT_ISSUER"),
+        audience: getRequiredEnvironmentVariable("JWT_AUDIENCE"),
+        expiresIn: getRequiredEnvironmentVariable("JWT_EXPIRES_IN"),
     },
 } as const;

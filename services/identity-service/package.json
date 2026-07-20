@@ -2,7 +2,8 @@
   "name": "identity-service",
   "version": "1.0.0",
   "private": true,
-  "description": "Kullanıcı kaydı, giriş ve kimlik doğrulama mikroservisi",  "type": "module",
+  "description": "Kullanıcı kaydı, giriş ve kimlik doğrulama mikroservisi",
+  "type": "module",
   "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
@@ -24,6 +25,7 @@
   "dependencies": {
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "jose": "^6.2.3",
     "pg": "^8.22.0"
   }
 }
