@@ -1,9 +1,8 @@
 {
-  "name": "todo-list-backend",
+  "name": "identity-service",
   "version": "1.0.0",
   "private": true,
-  "description": "To-Do List uygulamasının Node.js ve Express backend servisi",
-  "type": "module",
+  "description": "Kullanıcı kaydı, giriş ve kimlik doğrulama mikroservisi",  "type": "module",
   "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",

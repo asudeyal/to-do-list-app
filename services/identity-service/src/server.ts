@@ -1,6 +1,6 @@
 import app from "./app.js";
-import { pool, verifyDatabaseConnection } from "./config/database.js";
-import { env } from "./config/env.js";
+import { pool, verifyDatabaseConnection } from "./infrastructure/database/database.js";
+import { env } from "./infrastructure/config/env.js";
 
 async function startServer(): Promise<void> {
     try {
