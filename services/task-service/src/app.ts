@@ -1,8 +1,9 @@
 import express from "express";
-
+import { createTaskRouter } from "./presentation/routes/task.routes.js";
 import {
     authenticationMiddleware,
     categoryController,
+    taskController,
 } from "./composition-root.js";
 import { errorHandler } from "./presentation/middleware/error-handler.middleware.js";
 import { createCategoryRouter } from "./presentation/routes/category.routes.js";
@@ -18,6 +19,14 @@ app.use(
     "/api/categories",
     createCategoryRouter(
         categoryController,
+        authenticationMiddleware,
+    ),
+);
+
+app.use(
+    "/api/tasks",
+    createTaskRouter(
+        taskController,
         authenticationMiddleware,
     ),
 );

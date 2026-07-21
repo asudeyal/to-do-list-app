@@ -3,6 +3,7 @@ import type { ErrorRequestHandler } from "express";
 import { InvalidAccessTokenError } from "../../application/errors/invalid-access-token.error.js";
 import { DomainError } from "../../domain/errors/domain.error.js";
 import { CategoryAlreadyExistsError } from "../../application/errors/category-already-exists.error.js";
+import { CategoryNotFoundError } from "../../application/errors/category-not-found.error.js";
 
 export const errorHandler: ErrorRequestHandler = (
     error: unknown,
@@ -26,6 +27,13 @@ export const errorHandler: ErrorRequestHandler = (
 
     if (error instanceof DomainError) {
         response.status(400).json({
+            error: error.message,
+        });
+        return;
+    }
+
+    if (error instanceof CategoryNotFoundError) {
+        response.status(404).json({
             error: error.message,
         });
         return;
