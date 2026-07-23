@@ -42,6 +42,36 @@ class InMemoryTaskRepository implements TaskRepository {
     async save(task: Task): Promise<void> {
         this.tasks.push(task);
     }
+
+    async update(task: Task): Promise<void> {
+        const taskIndex = this.tasks.findIndex(
+            (storedTask) =>
+                storedTask.id === task.id &&
+                storedTask.ownerId === task.ownerId,
+        );
+
+        if (taskIndex >= 0) {
+            this.tasks[taskIndex] = task;
+        }
+    }
+
+    async deleteByIdAndOwnerId(
+        id: string,
+        requestedOwnerId: string,
+    ): Promise<boolean> {
+        const taskIndex = this.tasks.findIndex(
+            (task) =>
+                task.id === id &&
+                task.ownerId === requestedOwnerId,
+        );
+
+        if (taskIndex < 0) {
+            return false;
+        }
+
+        this.tasks.splice(taskIndex, 1);
+        return true;
+    }
 }
 
 class InMemoryCategoryRepository

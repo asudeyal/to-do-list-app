@@ -17,5 +17,20 @@ export function createTaskRouter(
     router.get("/", taskController.list);
     router.post("/", taskController.create);
 
+    router.patch(
+        "/:id/status",
+        taskController.changeStatus,
+    );
+
+    router.patch(
+        "/:id",
+        taskController.update,
+    );
+
+    router.delete(
+        "/:id",
+        taskController.remove,
+    );
+
     return router;
 }

@@ -9,4 +9,11 @@ export interface TaskRepository {
     findAllByOwnerId(ownerId: string): Promise<Task[]>;
 
     save(task: Task): Promise<void>;
+
+    update(task: Task): Promise<void>;
+
+    deleteByIdAndOwnerId(
+        id: string,
+        ownerId: string,
+    ): Promise<boolean>;
 }

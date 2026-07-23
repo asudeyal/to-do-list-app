@@ -110,6 +110,47 @@ export class PostgresTaskRepository
         );
     }
 
+
+    async update(task: Task): Promise<void> {
+        await this.databasePool.query(
+            `UPDATE tasks
+             SET category_id = $3,
+                 title = $4,
+                 description = $5,
+                 status = $6,
+                 priority = $7,
+                 due_date = $8,
+                 updated_at = $9
+             WHERE id = $1
+               AND owner_id = $2`,
+            [
+                task.id,
+                task.ownerId,
+                task.categoryId,
+                task.title,
+                task.description,
+                task.status,
+                task.priority,
+                task.dueDate,
+                task.updatedAt,
+            ],
+        );
+    }
+
+    async deleteByIdAndOwnerId(
+        id: string,
+        ownerId: string,
+    ): Promise<boolean> {
+        const result = await this.databasePool.query(
+            `DELETE FROM tasks
+             WHERE id = $1
+               AND owner_id = $2`,
+            [id, ownerId],
+        );
+
+        return result.rowCount === 1;
+    }
+
     private restoreTask(taskRow: TaskRow): Task {
         return Task.restore({
             id: taskRow.id,

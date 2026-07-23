@@ -4,6 +4,7 @@ import { InvalidAccessTokenError } from "../../application/errors/invalid-access
 import { DomainError } from "../../domain/errors/domain.error.js";
 import { CategoryAlreadyExistsError } from "../../application/errors/category-already-exists.error.js";
 import { CategoryNotFoundError } from "../../application/errors/category-not-found.error.js";
+import { TaskNotFoundError } from "../../application/errors/task-not-found.error.js";
 
 export const errorHandler: ErrorRequestHandler = (
     error: unknown,
@@ -20,6 +21,13 @@ export const errorHandler: ErrorRequestHandler = (
 
     if (error instanceof CategoryAlreadyExistsError) {
         response.status(409).json({
+            error: error.message,
+        });
+        return;
+    }
+
+    if (error instanceof TaskNotFoundError) {
+        response.status(404).json({
             error: error.message,
         });
         return;
