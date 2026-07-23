@@ -27,3 +27,11 @@ export interface CreateTaskInput {
     dueDate?: string | null;
     categoryId?: string | null;
 }
+
+export interface UpdateTaskInput {
+    title?: string;
+    description?: string | null;
+    priority?: TaskPriority;
+    dueDate?: string | null;
+    categoryId?: string | null;
+}

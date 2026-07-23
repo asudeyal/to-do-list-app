@@ -5,11 +5,14 @@ import {
 import { useNavigate } from "react-router";
 
 import { CreateTaskForm } from "../components/tasks/CreateTaskForm";
+import { EditTaskForm } from "../components/tasks/EditTaskForm";
 import {
     clearAuthSession,
     getStoredUser,
 } from "../services/auth-storage";
 import {
+    changeTaskStatus,
+    deleteTask,
     getTasks,
     TaskApiError,
 } from "../services/task.service";
@@ -51,10 +54,21 @@ export function DashboardPage() {
 
     const [tasks, setTasks] = useState<Task[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+
     const [errorMessage, setErrorMessage] =
         useState<string | null>(null);
+
+    const [actionError, setActionError] =
+        useState<string | null>(null);
+
     const [isCreateTaskOpen, setIsCreateTaskOpen] =
         useState(false);
+
+    const [editingTask, setEditingTask] =
+        useState<Task | null>(null);
+
+    const [busyTaskId, setBusyTaskId] =
+        useState<string | null>(null);
 
     useEffect(() => {
         const abortController = new AbortController();
@@ -111,6 +125,42 @@ export function DashboardPage() {
         };
     }, [navigate]);
 
+    function handleApiError(error: unknown): void {
+        if (
+            error instanceof TaskApiError &&
+            error.statusCode === 401
+        ) {
+            clearAuthSession();
+
+            navigate("/login", {
+                replace: true,
+                state: {
+                    message:
+                        "Oturumunun süresi doldu. Lütfen tekrar giriş yap.",
+                },
+            });
+
+            return;
+        }
+
+        const message =
+            error instanceof Error
+                ? error.message
+                : "Görev işlemi gerçekleştirilemedi.";
+
+        setActionError(message);
+    }
+
+    function replaceTask(updatedTask: Task): void {
+        setTasks((currentTasks) =>
+            currentTasks.map((task) =>
+                task.id === updatedTask.id
+                    ? updatedTask
+                    : task,
+            ),
+        );
+    }
+
     function handleLogout(): void {
         clearAuthSession();
 
@@ -126,6 +176,69 @@ export function DashboardPage() {
         ]);
 
         setIsCreateTaskOpen(false);
+        setActionError(null);
+    }
+
+    function handleTaskUpdated(task: Task): void {
+        replaceTask(task);
+        setEditingTask(null);
+        setActionError(null);
+    }
+
+    async function handleToggleStatus(
+        task: Task,
+    ): Promise<void> {
+        setBusyTaskId(task.id);
+        setActionError(null);
+
+        const nextStatus: TaskStatus =
+            task.status === "completed"
+                ? "pending"
+                : "completed";
+
+        try {
+            const updatedTask =
+                await changeTaskStatus(
+                    task.id,
+                    nextStatus,
+                );
+
+            replaceTask(updatedTask);
+        } catch (error: unknown) {
+            handleApiError(error);
+        } finally {
+            setBusyTaskId(null);
+        }
+    }
+
+    async function handleDeleteTask(
+        task: Task,
+    ): Promise<void> {
+        const isConfirmed = window.confirm(
+            `"${task.title}" görevini silmek istediğine emin misin?`,
+        );
+
+        if (!isConfirmed) {
+            return;
+        }
+
+        setBusyTaskId(task.id);
+        setActionError(null);
+
+        try {
+            await deleteTask(task.id);
+
+            setTasks((currentTasks) =>
+                currentTasks.filter(
+                    (currentTask) =>
+                        currentTask.id !== task.id,
+                ),
+            );
+        } catch (error: unknown) {
+            handleApiError(error);
+        } finally {
+            setBusyTaskId(null);
+        }
     }
 
     const activeTaskCount = tasks.filter(
@@ -214,6 +327,12 @@ export function DashboardPage() {
                     </article>
                 </div>
 
+                {actionError && (
+                    <p className="form-message form-message-error dashboard-action-error">
+                        {actionError}
+                    </p>
+                )}
+
                 <section className="task-panel">
                     <header className="task-panel-header">
                         <div>
@@ -249,69 +368,128 @@ export function DashboardPage() {
                         !errorMessage &&
                         tasks.length > 0 && (
                             <div className="task-list">
-                                {tasks.map((task) => (
-                                    <article
-                                        className="task-item"
-                                        key={task.id}
-                                    >
-                                        <span
-                                            className={`task-check task-check-${task.status}`}
-                                            aria-hidden="true"
+                                {tasks.map((task) => {
+                                    const isBusy =
+                                        busyTaskId ===
+                                        task.id;
+
+                                    return (
+                                        <article
+                                            className={`task-item ${
+                                                task.status ===
+                                                "completed"
+                                                    ? "task-item-completed"
+                                                    : ""
+                                            }`}
+                                            key={task.id}
                                         >
-                                            {task.status ===
-                                            "completed"
-                                                ? "✓"
-                                                : ""}
-                                        </span>
+                                            <button
+                                                className={`task-check task-check-${task.status}`}
+                                                type="button"
+                                                onClick={() =>
+                                                    void handleToggleStatus(
+                                                        task,
+                                                    )
+                                                }
+                                                disabled={
+                                                    isBusy
+                                                }
+                                                aria-label={
+                                                    task.status ===
+                                                    "completed"
+                                                        ? "Görevi bekliyor durumuna al"
+                                                        : "Görevi tamamla"
+                                                }
+                                            >
+                                                {task.status ===
+                                                "completed"
+                                                    ? "✓"
+                                                    : ""}
+                                            </button>
 
-                                        <div className="task-information">
-                                            <div className="task-title-row">
-                                                <h3>
-                                                    {task.title}
-                                                </h3>
+                                            <div className="task-information">
+                                                <div className="task-title-row">
+                                                    <h3>
+                                                        {
+                                                            task.title
+                                                        }
+                                                    </h3>
 
-                                                <span
-                                                    className={`status-badge status-${task.status}`}
-                                                >
-                                                    {
-                                                        statusLabels[
-                                                            task
-                                                                .status
-                                                            ]
-                                                    }
-                                                </span>
+                                                    <div className="task-actions">
+                                                        <span
+                                                            className={`status-badge status-${task.status}`}
+                                                        >
+                                                            {
+                                                                statusLabels[
+                                                                    task
+                                                                        .status
+                                                                    ]
+                                                            }
+                                                        </span>
+
+                                                        <button
+                                                            className="task-action-button"
+                                                            type="button"
+                                                            onClick={() =>
+                                                                setEditingTask(
+                                                                    task,
+                                                                )
+                                                            }
+                                                            disabled={
+                                                                isBusy
+                                                            }
+                                                        >
+                                                            Düzenle
+                                                        </button>
+
+                                                        <button
+                                                            className="task-action-button task-action-danger"
+                                                            type="button"
+                                                            onClick={() =>
+                                                                void handleDeleteTask(
+                                                                    task,
+                                                                )
+                                                            }
+                                                            disabled={
+                                                                isBusy
+                                                            }
+                                                        >
+                                                            Sil
+                                                        </button>
+                                                    </div>
+                                                </div>
+
+                                                {task.description && (
+                                                    <p>
+                                                        {
+                                                            task.description
+                                                        }
+                                                    </p>
+                                                )}
+
+                                                <div className="task-meta">
+                                                    <span>
+                                                        <i
+                                                            className={`priority-dot priority-${task.priority}`}
+                                                        />
+                                                        {
+                                                            priorityLabels[
+                                                                task
+                                                                    .priority
+                                                                ]
+                                                        }
+                                                    </span>
+
+                                                    <span>
+                                                        {formatDueDate(
+                                                            task.dueDate,
+                                                        )}
+                                                    </span>
+                                                </div>
                                             </div>
-
-                                            {task.description && (
-                                                <p>
-                                                    {
-                                                        task.description
-                                                    }
-                                                </p>
-                                            )}
-
-                                            <div className="task-meta">
-                                                <span>
-                                                    <i
-                                                        className={`priority-dot priority-${task.priority}`}
-                                                    />
-                                                    {
-                                                        priorityLabels[
-                                                            task
-                                                                .priority
-                                                            ]
-                                                    }
-                                                </span>
-
-                                                <span>
-                                                    {formatDueDate(
-                                                        task.dueDate,
-                                                    )}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </article>
-                                ))}
+                                        </article>
+                                    );
+                                })}
                             </div>
                         )}
                 </section>
@@ -322,6 +500,16 @@ export function DashboardPage() {
                     onTaskCreated={handleTaskCreated}
                     onCancel={() =>
                         setIsCreateTaskOpen(false)
+                    }
+                />
+            )}
+
+            {editingTask && (
+                <EditTaskForm
+                    task={editingTask}
+                    onTaskUpdated={handleTaskUpdated}
+                    onCancel={() =>
+                        setEditingTask(null)
                     }
                 />
             )}

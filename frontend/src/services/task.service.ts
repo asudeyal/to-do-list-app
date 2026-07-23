@@ -2,10 +2,17 @@ import { getAccessToken } from "./auth-storage";
 import type {
     CreateTaskInput,
     Task,
+    TaskStatus,
+    UpdateTaskInput,
 } from "../types/task";
 
 interface TaskListResponse {
     tasks: Task[];
+}
+
+interface TaskResponse {
+    message: string;
+    task: Task;
 }
 
 interface ApiErrorResponse {
@@ -42,12 +49,14 @@ function extractErrorMessage(
         }
     }
 
-    return "Görevler alınırken bir hata oluştu.";
+    return "Görev işlemi sırasında bir hata oluştu.";
 }
 
-export async function getTasks(
+async function request<TResponse>(
+    path: string,
+    options: RequestInit,
     signal?: AbortSignal,
-): Promise<Task[]> {
+): Promise<TResponse> {
     const accessToken = getAccessToken();
 
     if (!accessToken) {
@@ -57,16 +66,24 @@ export async function getTasks(
         );
     }
 
+    const headers = new Headers(options.headers);
+
+    headers.set(
+        "Authorization",
+        `Bearer ${accessToken}`,
+    );
+
     let response: Response;
 
     try {
-        response = await fetch("/task-api/tasks", {
-            method: "GET",
-            headers: {
-                Authorization: `Bearer ${accessToken}`,
+        response = await fetch(
+            `/task-api${path}`,
+            {
+                ...options,
+                headers,
+                ...(signal ? { signal } : {}),
             },
-            ...(signal ? { signal } : {}),
-        });
+        );
     } catch (error: unknown) {
         if (
             error instanceof DOMException &&
@@ -82,7 +99,11 @@ export async function getTasks(
     }
 
     const responseBody: unknown =
-        await response.json().catch(() => null);
+        response.status === 204
+            ? null
+            : await response
+                .json()
+                .catch(() => null);
 
     if (!response.ok) {
         throw new TaskApiError(
@@ -90,6 +111,38 @@ export async function getTasks(
             response.status,
         );
     }
+
+    return responseBody as TResponse;
+}
+
+function extractTask(
+    responseBody: TaskResponse,
+): Task {
+    if (
+        typeof responseBody !== "object" ||
+        responseBody === null ||
+        !("task" in responseBody)
+    ) {
+        throw new TaskApiError(
+            "Task Service geçersiz bir cevap döndürdü.",
+            0,
+        );
+    }
+
+    return responseBody.task;
+}
+
+export async function getTasks(
+    signal?: AbortSignal,
+): Promise<Task[]> {
+    const responseBody =
+        await request<TaskListResponse>(
+            "/tasks",
+            {
+                method: "GET",
+            },
+            signal,
+        );
 
     if (
         typeof responseBody !== "object" ||
@@ -103,63 +156,74 @@ export async function getTasks(
         );
     }
 
-    return (responseBody as TaskListResponse).tasks;
-}
-interface CreateTaskResponse {
-    message: string;
-    task: Task;
+    return responseBody.tasks;
 }
 
 export async function createTask(
     input: CreateTaskInput,
 ): Promise<Task> {
-    const accessToken = getAccessToken();
-
-    if (!accessToken) {
-        throw new TaskApiError(
-            "Oturum bilgisi bulunamadı.",
-            401,
-        );
-    }
-
-    let response: Response;
-
-    try {
-        response = await fetch("/task-api/tasks", {
-            method: "POST",
-            headers: {
-                Authorization: `Bearer ${accessToken}`,
-                "Content-Type": "application/json",
+    const responseBody =
+        await request<TaskResponse>(
+            "/tasks",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(input),
             },
-            body: JSON.stringify(input),
-        });
-    } catch {
-        throw new TaskApiError(
-            "Task Service'e ulaşılamadı.",
-            0,
         );
-    }
 
-    const responseBody: unknown =
-        await response.json().catch(() => null);
+    return extractTask(responseBody);
+}
 
-    if (!response.ok) {
-        throw new TaskApiError(
-            extractErrorMessage(responseBody),
-            response.status,
+export async function updateTask(
+    taskId: string,
+    input: UpdateTaskInput,
+): Promise<Task> {
+    const responseBody =
+        await request<TaskResponse>(
+            `/tasks/${encodeURIComponent(taskId)}`,
+            {
+                method: "PATCH",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(input),
+            },
         );
-    }
 
-    if (
-        typeof responseBody !== "object" ||
-        responseBody === null ||
-        !("task" in responseBody)
-    ) {
-        throw new TaskApiError(
-            "Task Service geçersiz bir cevap döndürdü.",
-            0,
+    return extractTask(responseBody);
+}
+
+export async function changeTaskStatus(
+    taskId: string,
+    status: TaskStatus,
+): Promise<Task> {
+    const responseBody =
+        await request<TaskResponse>(
+            `/tasks/${encodeURIComponent(
+                taskId,
+            )}/status`,
+            {
+                method: "PATCH",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ status }),
+            },
         );
-    }
 
-    return (responseBody as CreateTaskResponse).task;
+    return extractTask(responseBody);
+}
+
+export async function deleteTask(
+    taskId: string,
+): Promise<void> {
+    await request<null>(
+        `/tasks/${encodeURIComponent(taskId)}`,
+        {
+            method: "DELETE",
+        },
+    );
 }
